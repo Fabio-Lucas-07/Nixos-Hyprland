@@ -36,26 +36,27 @@
   hardware.graphics = {
     enable = true;
     enable32Bit = true;
+    extraPackages = with pkgs; [ nvidia-vaapi-driver ];
   };
 
   services.xserver.videoDrivers = [ "nvidia" ];
 
   hardware.nvidia = {
     modesetting.enable = true;
-    powerManagement.enable = true;
-    powerManagement.finegrained = true;
-    open = false;
+    powerManagement.enable = false;
+    powerManagement.finegrained = false;
+    open = true;
     nvidiaSettings = true;
     package = config.boot.kernelPackages.nvidiaPackages.beta;
 
-    prime = {
-      offload = {
-        enable = true;
-        enableOffloadCmd = true;
-      };
-      nvidiaBusId = "PCI:1:0:0";
-      amdgpuBusId = "PCI:4:0:0";
-    };
+#    prime = {
+#      offload = {
+#        enable = true;
+#        enableOffloadCmd = true;
+#      };
+#      nvidiaBusId = "PCI:1:0:0";
+#      amdgpuBusId = "PCI:4:0:0";
+#    };
   };
 
   environment.sessionVariables = {
@@ -65,8 +66,6 @@
     LIBVA_DRIVER_NAME = "nvidia";
     GBM_BACKEND = "nvidia-drm";
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
-    WLR_NO_HARDWARE_CURSORS = "1";
-    XWAYLAND_NO_GLAMOR = "1";
   };
 
   networking.hostName = "nixos";
@@ -104,9 +103,9 @@
 
   xdg.portal = {
     enable = true;
-    extraPortals = with pkgs; [ 
-      xdg-desktop-portal-gnome 
-      xdg-desktop-portal-gtk 
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-gnome
+      xdg-desktop-portal-gtk
       xdg-desktop-portal-wlr
     ];
     config = {
@@ -200,7 +199,7 @@
   users.users."fabio" = {
     isNormalUser = true;
     description = "Fabio";
-    extraGroups = [ "networkmanager" "wheel" "video" "adbusers" "libvirtd" ];
+    extraGroups = [ "networkmanager" "wheel" "video" "adbusers" "libvirtd" "docker" ];
     shell = pkgs.zsh;
   };
 
@@ -229,7 +228,7 @@
     yq-go wmctrl inotify-tools lavat file pipes clock-rs cbonsai killall
     psmisc eww swappy slurp grim playerctl satty cmatrix sl nodejs gh
 
-    
+
     (pkgs.vscodium-fhs.overrideAttrs (oldAttrs: {
     # Altera o product.json empacotado para apontar para o Marketplace oficial
     postInstall = (oldAttrs.postInstall or "") + ''
@@ -239,8 +238,8 @@
       mv $out/lib/vscode/resources/app/product.json.tmp $out/lib/vscode/resources/app/product.json
     '';
   }))
- 
-    maven jdk21 python3 android-tools
+
+     maven jdk21 python3 android-tools
     pgadmin4-desktopmode  neovim
     dotnet-sdk pkgsCross.mingwW64.stdenv.cc
 
@@ -251,11 +250,12 @@
     insomnia spotify linux-wallpaperengine nautilus
 
     mpv obs-studio gpu-screen-recorder ffmpeg qbittorrent bottles steam-run
+    protonup-qt
 
     kitty alacritty taskwarrior3 zenity matugen xdg-desktop-portal-gtk
     mpvpaper power-profiles-daemon
-    xdg-user-dirs imagemagick xwayland-satellite 
-    
+    xdg-user-dirs imagemagick xwayland-satellite
+
     noctalia-shell
 
     (quickshell.overrideAttrs (oldAttrs: {
