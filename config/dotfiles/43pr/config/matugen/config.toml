@@ -1,0 +1,46 @@
+[config]
+
+[templates.semantic]
+input_path  = '~/.config/matugen/templates/semantic.json'
+output_path = '~/.cache/43pr/matugen/semantic.json'
+
+# Temas gerados pelo mesmo wallpaper para os outros aplicativos.
+[templates.discord]
+input_path = "~/.config/matugen/templates/discord.css.template"
+output_path = "~/.config/vesktop/themes/matugen.theme.css"
+
+[templates.firefox]
+input_path = "~/.config/matugen/templates/firefox.css"
+output_path = "~/.mozilla/firefox/zawmoi9h.default/chrome/matugen.css"
+
+[templates.web_github]
+input_path = "~/.config/matugen/templates/websites/github.css.template"
+output_path = "~/.mozilla/firefox/zawmoi9h.default/chrome/matugen-github.css"
+
+[templates.web_youtube]
+input_path = "~/.config/matugen/templates/websites/youtube.css.template"
+output_path = "~/.mozilla/firefox/zawmoi9h.default/chrome/matugen-youtube.css"
+
+[templates.neovim]
+input_path = "~/.config/matugen/templates/nvim-colors.lua.template"
+output_path = "~/.config/nvim/matugen_colors.lua"
+
+[templates.swayosd]
+input_path = "~/.config/matugen/templates/swayosd.css.template"
+output_path = "~/.config/swayosd/style.css"
+
+[templates.qt5ct]
+input_path = "~/.config/matugen/templates/qtct.conf.template"
+output_path = "~/.config/qt5ct/colors/matugen.conf"
+
+[templates.qt6ct]
+input_path = "~/.config/matugen/templates/qtct.conf.template"
+output_path = "~/.config/qt6ct/colors/matugen.conf"
+
+[templates.qt5_style]
+input_path = "~/.config/matugen/templates/qt-style.qss.template"
+output_path = "~/.config/qt5ct/qss/matugen-style.qss"
+
+[templates.qt6_style]
+input_path = "~/.config/matugen/templates/qt-style.qss.template"
+output_path = "~/.config/qt6ct/qss/matugen-style.qss"

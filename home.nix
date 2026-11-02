@@ -16,9 +16,10 @@ let
   programImports = map (name: programsDir + "/${name}") directories;
 in
 {
-  # Injeta os programas automaticamente e define a sessão do Niri
+  # Injeta os programas automaticamente e define a sessão do Hyprland
   imports = [
-    ./config/sessions/niri
+    ./config/sessions/hyprland
+    ./config/dotfiles/43pr
   ] ++ programImports;
 
   home.username = "fabio";
@@ -42,7 +43,6 @@ in
     let
       getFrom = url: hash: name: {
         enable = true;
-        gtk.enable = true;
         x11.enable = true;
         name = name;
         size = 24;
@@ -57,50 +57,31 @@ in
       };
     in
     getFrom
-      "https://github.com/yeyushengfan258/ArcMidnight-Cursors/archive/refs/heads/main.zip"
+      "https://github.com/yeyushengfan258/ArcMidnight-Cursors/archive/7f7d140a41fc134e72747d1052965b2c308b99de.zip"
       "sha256-VgOpt0rukW0+rSkLFoF9O0xO/qgwieAchAev1vjaqPE="
       "ArcMidnight-Cursors";
-
-  dconf.settings = {
-    "org/gnome/desktop/interface" = {
-      color-scheme = "prefer-dark";
-      gtk-theme = "adw-gtk3-dark";
-    };
-  };
 
   home.sessionVariables = {};
 
   services.easyeffects.enable = true;
-
-  gtk = {
-    enable = true;
-
-    gtk3.extraCss = ''@import url("file:///home/fabio/.cache/matugen/colors-gtk.css");'';
-    gtk4.extraCss = ''@import url("file:///home/fabio/.cache/matugen/colors-gtk.css");'';
-
-    gtk3.extraConfig = {
-      gtk-application-prefer-dark-theme = 1;
-      gtk-theme-name = "adw-gtk3-dark";
-    };
-
-    gtk4.extraConfig = {
-      gtk-application-prefer-dark-theme = 1;
-    };
-  };
 
   qt = {
     enable = true;
     platformTheme.name = "qt6ct";
   };
 
-  xdg.portal = {
+  programs.fish = {
     enable = true;
-    extraPortals = with pkgs; [
-      xdg-desktop-portal-gtk
-    ];
-    config.common.default = "*";
-  };
 
+    interactiveShellInit = ''
+      set -e IN_NIX_SHELL
+      set -e name
+      fastfetch --config examples/32.jsonc
+    '';
+
+
+  };
+  
   programs.home-manager.enable = true;
 
   fonts.fontconfig.enable = true;

@@ -1,5 +1,5 @@
 {
-  description = "Configuracao NixOS com Niri, Noctalia, Home Manager e Lanzaboote";
+  description = "Configuracao NixOS com Hyprland, Home Manager e Lanzaboote";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -13,33 +13,27 @@
       url = "github:nix-community/lanzaboote/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    noctalia = {
-      url = "github:noctalia-dev/noctalia";
-      inputs.nixpkgs.follows = "nixpkgs"; # this line is optional, prevents downloading two versions of nixpkgs but disables cache
-    };
   };
 
-  outputs = { self, nixpkgs, home-manager, lanzaboote, noctalia, ... }@inputs: {
-    nixosConfigurations = {
-      nixos = nixpkgs.lib.nixosSystem {
+  outputs = { self, nixpkgs, home-manager, lanzaboote, ... }@inputs:
+    let
+      # Cada pasta em hosts/ vira um PC, e o nome da pasta vira o hostname.
+      hostDirs = builtins.readDir ./hosts;
+      hostNames = builtins.filter (name: hostDirs.${name} == "directory") (builtins.attrNames hostDirs);
+
+      mkHost = name: nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = { inherit inputs; };
         modules = [
-          ./hardware-configuration.nix
+          (./hosts + "/${name}")
           ./configuration.nix
           home-manager.nixosModules.home-manager
           lanzaboote.nixosModules.lanzaboote
-          {
-            nixpkgs.overlays = [
-              (final: prev: {
-                noctalia-shell = noctalia.packages.${prev.system}.default;
-                noctalia = noctalia.packages.${prev.system}.default;
-              })
-            ];
-          }
+          { networking.hostName = name; }
         ];
       };
+    in
+    {
+      nixosConfigurations = nixpkgs.lib.genAttrs hostNames mkHost;
     };
-  };
 }

@@ -1,6 +1,9 @@
 { config, pkgs, lib, ... }:
 {
-  imports = [ ];
+  imports = [
+    ./modules/machine.nix
+    ./config/dotfiles/43pr/system.nix
+  ];
 
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
@@ -9,17 +12,11 @@
     imports = [ ./home.nix ];
   };
 
-  boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.systemd-boot.configurationLimit = 2;
-  boot.loader.systemd-boot.enable = lib.mkForce false;
-
-  boot.lanzaboote = {
-    enable = true;
-    pkiBundle = "/etc/secureboot";
-  };
-
+  #open port 4242 for lan-mouse
+  networking.firewall.allowedUDPPorts = [ 4242 ];
+  hardware.uinput.enable = true;
+    
   boot.kernelPackages = pkgs.linuxPackages;
-  hardware.cpu.amd.updateMicrocode = true;
 
   boot.kernelModules = [ "tcp_bbr" ];
   boot.kernel.sysctl = {
@@ -31,49 +28,21 @@
     "net.ipv4.tcp_wmem" = "4096 87380 1073741824";
   };
 
-  powerManagement.cpuFreqGovernor = "performance";
-
   hardware.graphics = {
     enable = true;
     enable32Bit = true;
-    extraPackages = with pkgs; [ nvidia-vaapi-driver ];
-  };
-
-  services.xserver.videoDrivers = [ "nvidia" ];
-
-  hardware.nvidia = {
-    modesetting.enable = true;
-    powerManagement.enable = false;
-    powerManagement.finegrained = false;
-    open = true;
-    nvidiaSettings = true;
-    package = config.boot.kernelPackages.nvidiaPackages.beta;
-
-#    prime = {
-#      offload = {
-#        enable = true;
-#        enableOffloadCmd = true;
-#      };
-#      nvidiaBusId = "PCI:1:0:0";
-#      amdgpuBusId = "PCI:4:0:0";
-#    };
   };
 
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1";
     ELECTRON_OZONE_PLATFORM_HINT = "wayland";
     ELECTRON_ENABLE_WAYLAND = "1";
-    LIBVA_DRIVER_NAME = "nvidia";
-    GBM_BACKEND = "nvidia-drm";
-    __GLX_VENDOR_LIBRARY_NAME = "nvidia";
   };
 
-  networking.hostName = "nixos";
   networking.networkmanager.enable = true;
   services.timesyncd.enable = true;
 
   time.timeZone = "America/Sao_Paulo";
-  time.hardwareClockInLocalTime = true;
 
   i18n.defaultLocale = "en_US.UTF-8";
   i18n.extraLocaleSettings = {
@@ -93,7 +62,13 @@
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = false;
 
-  programs.niri.enable = true;
+  programs.hyprland.enable = true;
+
+  # Sem sessão padrão, o GDM tenta abrir o gnome-session e entra em loop de login.
+  services.displayManager.defaultSession = "hyprland";
+
+  # Senhas salvas dos aplicativos e agente SSH.
+  services.gnome.gnome-keyring.enable = true;
 
   services.xserver.xkb = {
     layout = "us";
@@ -104,15 +79,12 @@
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
-      xdg-desktop-portal-gnome
       xdg-desktop-portal-gtk
-      xdg-desktop-portal-wlr
     ];
     config = {
-      niri = {
-        default = [ "gnome" "gtk" ];
-        "org.freedesktop.impl.portal.Screencast" = "gnome";
-        "org.freedesktop.impl.portal.Screenshot" = "gnome";
+      hyprland = {
+        default = [ "hyprland" "gtk" ];
+        "org.freedesktop.impl.portal.Secret" = "gnome-keyring";
       };
       common = {
         default = [ "gtk" ];
@@ -121,6 +93,8 @@
   };
 
   fonts.packages = with pkgs; [
+    powerline-fonts
+    nerd-fonts.fira-code
     inter
     jetbrains-mono
     nerd-fonts.iosevka
@@ -154,6 +128,14 @@
   };
 
   programs.zsh.enable = true;
+  programs.fish = {
+   enable = true;
+   promptInit = "";
+   interactiveShellInit = ''
+     set -g fish_greeting ""
+   '';
+ };
+
   programs.dconf.enable = true;
   programs.firefox.enable = true;
   services.flatpak.enable = true;
@@ -165,6 +147,9 @@
     enable = true;
     remotePlay.openFirewall = true;
     dedicatedServer.openFirewall = true;
+    package = pkgs.steam.override {
+      extraArgs = "-system-composer";
+    };
   };
   programs.gamemode.enable = true;
 
@@ -200,10 +185,10 @@
     isNormalUser = true;
     description = "Fabio";
     extraGroups = [ "networkmanager" "wheel" "video" "adbusers" "libvirtd" "docker" ];
-    shell = pkgs.zsh;
+    shell = pkgs.fish;
   };
 
-  users.defaultUserShell = pkgs.zsh;
+  users.defaultUserShell = pkgs.fish;
 
   security.sudo.extraRules = [
     {
@@ -242,8 +227,10 @@
      maven jdk21 python3 android-tools
     pgadmin4-desktopmode  neovim
     dotnet-sdk pkgsCross.mingwW64.stdenv.cc
-
-    brave vesktop telegram-desktop obsidian onlyoffice-desktopeditors
+    
+    lan-mouse
+    
+    discord brave vesktop telegram-desktop obsidian onlyoffice-desktopeditors
     libreoffice-qt hunspell hunspellDicts.ru_RU hunspellDicts.en_US papers
     kdePackages.kolourpaint mission-center glaxnimate inkscape
     hicolor-icon-theme papirus-icon-theme nwg-look
@@ -252,11 +239,9 @@
     mpv obs-studio gpu-screen-recorder ffmpeg qbittorrent bottles steam-run
     protonup-qt
 
-    kitty alacritty taskwarrior3 zenity matugen xdg-desktop-portal-gtk
+    oh-my-fish fish kitty alacritty taskwarrior3 zenity matugen xdg-desktop-portal-gtk
     mpvpaper power-profiles-daemon
-    xdg-user-dirs imagemagick xwayland-satellite
-
-    noctalia-shell
+    xdg-user-dirs imagemagick
 
     (quickshell.overrideAttrs (oldAttrs: {
       buildInputs = (oldAttrs.buildInputs or []) ++ (with qt6; [
@@ -269,6 +254,4 @@
       ]);
     }))
   ];
-
-  system.stateVersion = "26.05";
 }
