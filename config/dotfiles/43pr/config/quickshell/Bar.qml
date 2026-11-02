@@ -504,8 +504,8 @@ Scope {
 u=-; t=-
 isnum() { case "$1" in ''|*[!0-9.]*) return 1;; *) return 0;; esac; }
 
-# 1. NVIDIA
-if command -v nvidia-smi >/dev/null 2>&1; then
+# 1. NVIDIA (skipped on hybrid laptops: each nvidia-smi call would wake the dGPU)
+if [ ! -e /dev/dri/igpu ] && command -v nvidia-smi >/dev/null 2>&1; then
   o=$(nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -n1)
   if [ -n "$o" ]; then
     a=$(echo "$o" | cut -d, -f1 | tr -d ' ')

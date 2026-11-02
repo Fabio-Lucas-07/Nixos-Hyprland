@@ -158,6 +158,9 @@ write_host_config() {
             printf '      integratedBusId = "%s";\n' "$prime_integrated"
             printf '    };\n'
         fi
+        if is_laptop; then
+            printf '    laptop = true;\n'
+        fi
         printf '  };\n\n'
         printf '  hardware.enableRedistributableFirmware = true;\n\n'
         printf '  system.stateVersion = "%s";\n}\n' "$state_version"

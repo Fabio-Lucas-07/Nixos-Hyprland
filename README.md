@@ -20,7 +20,8 @@ Outros PCs iniciam sem Secure Boot. Para ativar em um deles, crie as chaves do L
 | --- | --- |
 | `configuration.nix`, `home.nix` | Configuração comum a todos os PCs |
 | `hosts/<nome>/` | Hardware e opções de cada PC; cada pasta vira uma configuração do flake |
-| `modules/machine.nix` | Boot e GPU conforme as opções de `hosts/<nome>/` |
+| `modules/machine.nix` | Boot, GPU e energia conforme as opções de `hosts/<nome>/` |
+| `scripts/` | Verificações do sistema |
 | `config/dotfiles/43pr/` | Tema 43PR, adaptado para NixOS |
 | `config/sessions/hyprland/` | Sessão do Hyprland |
 | `config/programs/` | Outros programas, importados automaticamente |
@@ -30,6 +31,20 @@ Outros PCs iniciam sem Secure Boot. Para ativar em um deles, crie as chaves do L
 ```sh
 sudo nixos-rebuild switch --flake /etc/nixos#$(hostname)
 ```
+
+## Notebook
+
+Em `hosts/alienware`, a tela roda na GPU Intel e a NVIDIA fica desligada até ser pedida:
+
+| Uso | Comando |
+| --- | --- |
+| Programa na NVIDIA | `nvidia-offload programa` |
+| Jogo na Steam (opções de inicialização) | `gamemoderun nvidia-offload %command%` |
+| Monitor na porta HDMI, que é ligada à NVIDIA | Sessão `Hyprland (HDMI)` na tela de login |
+| Conferir o estado da energia | `scripts/power-check.sh` |
+| Comparar antes e depois de suspender | `scripts/power-check.sh --resume` |
+
+As portas USB-C ficam na GPU Intel e funcionam na sessão normal.
 
 ## Atalhos principais
 
