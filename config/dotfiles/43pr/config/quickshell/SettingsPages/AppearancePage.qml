@@ -87,10 +87,10 @@ Item {
         blurLayerAlpha: 0.1,
         shadowRange: 4,
         shadowPower: 3,
-        speedWindows: 5,
-        speedBorder: 5,
-        speedFade: 4,
-        speedWorkspaces: 6,
+        speedWindows: 2.5,
+        speedBorder: 2.5,
+        speedFade: 2,
+        speedWorkspaces: 2.5,
         workspaceStyle: "slidefadevert"
     })
     property var look: Object.assign({}, lookDefaults)
@@ -209,12 +209,13 @@ Item {
         const stmts = []
         stmts.push("hl.config({ render = { expand_undersized_textures = " + (l.expandUndersized ? "true" : "false") + " } })")
         stmts.push("hl.config(" + luaTable(cfg, 0) + ")")
-        stmts.push("hl.curve(\"easeOut\", { type = \"bezier\", points = { {0.05, 0.9}, {0.1, 1.0} } })")
+        stmts.push("hl.curve(\"easeOut\", { type = \"bezier\", points = { {0.22, 1.0}, {0.36, 1.0} } })")
+        stmts.push(animLine("global",     3,                 "easeOut"))
         stmts.push(animLine("windows",    l.speedWindows,    "easeOut"))
         stmts.push(animLine("windowsOut", l.speedWindows,    "easeOut"))
-        stmts.push(animLine("border",     l.speedBorder,     "default"))
-        stmts.push(animLine("fade",       l.speedFade,       "default"))
-        stmts.push(animLine("workspaces", l.speedWorkspaces, "default", l.workspaceStyle))
+        stmts.push(animLine("border",     l.speedBorder,     "easeOut"))
+        stmts.push(animLine("fade",       l.speedFade,       "easeOut"))
+        stmts.push(animLine("workspaces", l.speedWorkspaces, "easeOut", l.workspaceStyle))
         const layerBlur = fxOn && l.blurLayers
         stmts.push("hl.layer_rule({ name = \"qs\", match = { namespace = \"^(quickshell|settings|notifications|powermenu|powermenu-settings|mediaosd|mediaosd-settings|recorder-osd|todo|wheel|colorpicker|colorpicker-editor)$\" }, blur = "
         + (layerBlur ? "true" : "false")
@@ -1181,19 +1182,19 @@ Item {
                         GroupLabel { text: "ANIMATION SPEED" }
 
                         Stepper {
-                            label: "WINDOWS"; value: page.look.speedWindows; from: 1; to: 20
+                            label: "WINDOWS"; value: page.look.speedWindows; from: 1; to: 20; step: 0.5
                             onMoved: v => page.setLook("speedWindows", v)
                         }
                         Stepper {
-                            label: "BORDER"; value: page.look.speedBorder; from: 1; to: 20
+                            label: "BORDER"; value: page.look.speedBorder; from: 1; to: 20; step: 0.5
                             onMoved: v => page.setLook("speedBorder", v)
                         }
                         Stepper {
-                            label: "FADE"; value: page.look.speedFade; from: 1; to: 20
+                            label: "FADE"; value: page.look.speedFade; from: 1; to: 20; step: 0.5
                             onMoved: v => page.setLook("speedFade", v)
                         }
                         Stepper {
-                            label: "WORKSPACES"; value: page.look.speedWorkspaces; from: 1; to: 20
+                            label: "WORKSPACES"; value: page.look.speedWorkspaces; from: 1; to: 20; step: 0.5
                             onMoved: v => page.setLook("speedWorkspaces", v)
                         }
                     }

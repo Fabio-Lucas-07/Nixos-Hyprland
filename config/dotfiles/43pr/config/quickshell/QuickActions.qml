@@ -223,7 +223,7 @@ Scope {
 
     Process {
         id: nightCheck
-        command: ["pgrep", "-x", "gammastep"]
+        command: ["pgrep", "-f", "^[^ ]*gammastep( |$)"]
         onExited: function (code) { root.nightOn = (code === 0) }
     }
 
@@ -299,7 +299,7 @@ Scope {
         onTriggered: {
             if (root.nightOn)
                 Quickshell.execDetached({ command: ["sh", "-c",
-                    "pkill -x gammastep; sleep 0.15; exec gammastep -O " + root.nightTemp] })
+                    "pkill -f '^[^ ]*gammastep( |$)'; sleep 0.15; exec gammastep -O " + root.nightTemp] })
             root.saveState()
         }
     }
@@ -356,7 +356,7 @@ Scope {
             break
         case "night":
             if (root.nightOn)
-                Quickshell.execDetached({ command: ["pkill", "-x", "gammastep"] })
+                Quickshell.execDetached({ command: ["pkill", "-f", "^[^ ]*gammastep( |$)"] })
             else
                 Quickshell.execDetached({ command: ["gammastep", "-O", String(root.nightTemp)] })
             root.nightOn = !root.nightOn

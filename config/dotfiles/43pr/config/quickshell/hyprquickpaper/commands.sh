@@ -20,7 +20,7 @@ case "${img,,}" in
 
         # mpvpaper can't do transitions, so stop the old one, let awww animate
         # to the video's first frame, then start mpvpaper on top once it's done
-        pkill -x mpvpaper
+        pkill -f '^[^ ]*mpvpaper( |$)'
         if [[ -n "$theme_img" ]]; then
             awww img "$theme_img" -t outer --transition-duration 1
             sleep 1
@@ -31,7 +31,7 @@ case "${img,,}" in
         ;;
     *)
         # static/GIF wallpaper: stop any live wallpaper so it doesn't cover awww
-        pkill -x mpvpaper
+        pkill -f '^[^ ]*mpvpaper( |$)'
         rm -f "$HOME/.cache/43pr/last-live"
 
         # awww handles GIFs natively and keeps them animated

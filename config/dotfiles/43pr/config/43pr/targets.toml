@@ -4,7 +4,7 @@
 [kitty]
 input  = "~/.config/43pr/templates/kitty.conf"
 output = "~/.config/kitty/matugen.conf"
-reload = ["pkill", "-USR1", "-x", "kitty"]
+reload = ["pkill", "-USR1", "-f", "^[^ ]*kitty( |$)"]
 
 [rofi]
 input  = "~/.config/43pr/templates/rofi-colors.rasi"
