@@ -17,7 +17,6 @@
 
   outputs = { self, nixpkgs, home-manager, lanzaboote, ... }@inputs:
     let
-      # Cada pasta em hosts/ vira um PC, e o nome da pasta vira o hostname.
       hostDirs = builtins.readDir ./hosts;
       hostNames = builtins.filter (name: hostDirs.${name} == "directory") (builtins.attrNames hostDirs);
 
