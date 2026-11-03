@@ -2,8 +2,8 @@
 { config, lib, pkgs, ... }:
 
 let
-  sudo = "/run/wrappers/bin/sudo";
   systemctl = "${config.systemd.package}/bin/systemctl";
+  dgpuPowerControl = "/sys/bus/pci/devices/0000:01:00.0/power/control";
 in
 {
   imports = [ ./hardware-configuration.nix ];
@@ -23,19 +23,43 @@ in
 
   hardware.enableRedistributableFirmware = true;
 
+  # Controla a potência pelas tabelas térmicas do firmware, como na configuração anterior com niri.
+  services.thermald.enable = true;
+
+  # A Steam roda em resolução real no XWayland e precisa da própria escala para não ficar minúscula.
+  environment.sessionVariables.STEAM_FORCE_DESKTOPUI_SCALING = "1.5";
+
   # Este firmware só oferece s2idle, então o driver precisa usar S0ix ao suspender.
   hardware.nvidia.moduleParams.nvidia = {
     NVreg_EnableS0ixPowerManagement = 1;
     NVreg_TemporaryFilePath = "/var/tmp";
   };
 
-  # nvidia-powerd libera até 65 W na GPU, mas pode impedir o D3cold:
-  # só roda enquanto há um jogo em `gamemoderun`.
+  # nvidia-powerd libera até 65 W na GPU, mas pode impedir o D3cold: só roda na tomada.
   hardware.nvidia.dynamicBoost.enable = true;
   systemd.services.nvidia-powerd.wantedBy = lib.mkForce [ ];
-  programs.gamemode.settings.custom = {
-    start = "${sudo} ${systemctl} start nvidia-powerd.service";
-    end = "${sudo} ${systemctl} stop nvidia-powerd.service";
+
+  # Na tomada, a NVIDIA fica ligada; na bateria, volta a desligar quando ociosa.
+  systemd.services.nvidia-on-ac = {
+    description = "Mantém a NVIDIA ligada enquanto o notebook está na tomada";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "dbus.service" "systemd-modules-load.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecCondition = pkgs.writeShellScript "nvidia-on-ac-condition" ''
+        read -r online </sys/class/power_supply/AC/online
+        [ "$online" = 1 ]
+      '';
+      ExecStart = pkgs.writeShellScript "nvidia-on-ac-start" ''
+        echo on >${dgpuPowerControl}
+        ${systemctl} start --no-block nvidia-powerd.service
+      '';
+      ExecStop = pkgs.writeShellScript "nvidia-on-ac-stop" ''
+        ${systemctl} stop --no-block nvidia-powerd.service
+        echo auto >${dgpuPowerControl}
+      '';
+    };
   };
 
   boot.blacklistedKernelModules = [
@@ -47,6 +71,8 @@ in
   # Com o cabo desligado, a porta Ethernet ativa (e sem ASPM) impede estados ociosos profundos.
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10ec", ATTR{device}=="0x8168", ATTR{power/control}="auto"
+    ACTION=="change", SUBSYSTEM=="power_supply", KERNEL=="AC", ATTR{online}=="1", RUN+="${systemctl} start --no-block nvidia-on-ac.service"
+    ACTION=="change", SUBSYSTEM=="power_supply", KERNEL=="AC", ATTR{online}=="0", RUN+="${systemctl} stop --no-block nvidia-on-ac.service"
   '';
 
   # Só para hibernar: a zram tem prioridade maior e continua sendo a swap do dia a dia.

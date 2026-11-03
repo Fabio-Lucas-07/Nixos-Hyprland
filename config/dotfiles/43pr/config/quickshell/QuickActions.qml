@@ -237,7 +237,8 @@ Scope {
 
     Process {
         id: brightCheck
-        command: ["brightnessctl", "-m"]
+        // "[!n]*" skips nvidia_0, which doesn't drive the panel on hybrid laptops
+        command: ["brightnessctl", "-c", "backlight", "-d", "[!n]*", "-m"]
         stdout: StdioCollector {
             onStreamFinished: {
                 var parts = text.trim().split(",")
@@ -268,7 +269,7 @@ Scope {
         id: brightApplyTimer
         interval: 60
         onTriggered: Quickshell.execDetached({
-            command: ["brightnessctl", "set", Math.round(root.brightness * 100) + "%"]
+            command: ["brightnessctl", "-c", "backlight", "-d", "[!n]*", "set", Math.round(root.brightness * 100) + "%"]
         })
     }
 

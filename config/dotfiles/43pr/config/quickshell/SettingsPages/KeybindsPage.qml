@@ -78,7 +78,8 @@ Item {
         { id: "fx_focus2",    label: "FOCUS WINDOW (ALT)",        chord: "SUPER + ARROWS / A / D" },
         { id: "fx_move2",     label: "MOVE WINDOW (ALT)",         chord: "SUPER + CTRL + ARROWS / H / J / K / L" },
         { id: "fx_resize",    label: "RESIZE WINDOW",             chord: "SUPER + ALT + H / J / K / L" },
-        { id: "fx_wsrel",     label: "NEXT / PREVIOUS WORKSPACE", chord: "SUPER + U / I" }
+        { id: "fx_wsrel",     label: "NEXT / PREVIOUS WORKSPACE", chord: "SUPER + U / I" },
+        { id: "fx_nvidia",    label: "LAUNCHER ON NVIDIA GPU",    chord: "SUPER + ALT + LAUNCHER KEY" }
     ]
 
     property var bindKeys: ({})

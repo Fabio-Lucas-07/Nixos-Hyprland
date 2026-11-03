@@ -14,24 +14,22 @@ let
     in
     "pci-0000:${hex (builtins.elemAt parts 1)}:${hex (builtins.elemAt parts 2)}.${builtins.elemAt parts 3}";
 
-  # A saída HDMI fica ligada à NVIDIA, que não entra em repouso nesta sessão.
-  hdmiSession = (pkgs.writeTextDir "share/wayland-sessions/hyprland-hdmi.desktop" ''
-    [Desktop Entry]
-    Name=Hyprland (HDMI)
-    Comment=Hyprland com as saídas da NVIDIA ativas; a placa fica ligada
-    Exec=${pkgs.writeShellScript "hyprland-hdmi" ''
-      export AQ_DRM_DEVICES=/dev/dri/igpu:/dev/dri/dgpu
-      exec ${config.programs.hyprland.package}/bin/start-hyprland
-    ''}
-    Type=Application
-    DesktopNames=Hyprland
-  '').overrideAttrs (_: {
-    passthru.providedSessions = [ "hyprland-hdmi" ];
-  });
-
   dpms = action: ''/run/current-system/sw/bin/hyprctl dispatch 'hl.dsp.dpms({ action = "${action}" })' '';
-  brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
+  # "[!n]*" ignora o nvidia_0, que o brightnessctl escolheria mas não controla a tela do híbrido.
+  brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl -c backlight -d '[!n]*'";
   loginctl = "${config.systemd.package}/bin/loginctl";
+
+  # Parte de suspend-then-hibernate do hook da NVIDIA (lib/systemd/system-sleep/nvidia).
+  # O resto dele chama chvt sem o kbd no PATH, e a tela ficaria preta na suspensão comum.
+  nvidiaSleepHook = pkgs.writeShellScript "nvidia-suspend-then-hibernate-hook" ''
+    if [ "$2" = suspend-then-hibernate ] && [ -f /proc/driver/nvidia/suspend ]; then
+      case "$1:$SYSTEMD_SLEEP_ACTION" in
+        post:*) echo resume >/proc/driver/nvidia/suspend ;;
+        pre:hibernate) echo hibernate >/proc/driver/nvidia/suspend ;;
+        pre:suspend-after-failed-hibernate) echo suspend >/proc/driver/nvidia/suspend ;;
+      esac
+    fi
+  '';
 
   suspendOnBattery = pkgs.writeShellScript "suspend-on-battery" ''
     for file in /sys/class/power_supply/A*/online; do
@@ -121,7 +119,15 @@ in
         nvidiaSettings = true;
         package =
           if isHybrid
-          then config.boot.kernelPackages.nvidiaPackages.stable
+          then config.boot.kernelPackages.nvidiaPackages.stable.overrideAttrs (old: {
+            # Corrigem Oops do kernel sem solução oficial até o driver 615:
+            # - imagem da GPU integrada em monitor da NVIDIA (open-gpu-kernel-modules, discussão 1356);
+            # - eventos ACPI em paralelo, comuns na bateria (fórum da NVIDIA, tópico 385856).
+            patches = (old.patches or [ ]) ++ [
+              ../patches/nvidia-drm-null-pmemory.patch
+              ../patches/nvidia-acpi-notify-mutex.patch
+            ];
+          })
           else config.boot.kernelPackages.nvidiaPackages.beta;
       };
     })
@@ -150,13 +156,38 @@ in
         ACTION!="remove", SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ENV{ID_PATH}=="${pciIdPath cfg.prime.nvidiaBusId}", SYMLINK+="dri/dgpu"
       '';
 
-      # O Hyprland abre só a integrada, e a NVIDIA fica livre para desligar.
-      environment.sessionVariables.AQ_DRM_DEVICES = "/dev/dri/igpu";
-      services.displayManager.sessionPackages = [ hdmiSession ];
+      # Com as duas abertas, um monitor conectado na NVIDIA funciona na hora. Sem monitor nela,
+      # o Hyprland destrói o que tinha criado na placa, e ela desliga sozinha.
+      environment.sessionVariables.AQ_DRM_DEVICES = "/dev/dri/igpu:/dev/dri/dgpu";
+
+      # O console ocuparia o monitor assim que conectado e manteria a NVIDIA ligada sem sessão.
+      hardware.nvidia.moduleParams.nvidia-drm.fbdev = lib.mkForce 0;
+
+      # O módulo do NixOS só prepara o driver para suspend e hibernate. Sem isto,
+      # suspend-then-hibernate falha com -EIO e o notebook continua ligado.
+      systemd.services.nvidia-suspend-then-hibernate = {
+        description = "NVIDIA system suspend-then-hibernate actions";
+        path = [ pkgs.kbd ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${config.hardware.nvidia.package.out}/bin/nvidia-sleep.sh 'suspend'";
+        };
+        before = [ "systemd-suspend-then-hibernate.service" ];
+        requiredBy = [ "systemd-suspend-then-hibernate.service" ];
+      };
+      systemd.services.nvidia-resume = {
+        after = [ "systemd-suspend-then-hibernate.service" ];
+        requiredBy = [ "systemd-suspend-then-hibernate.service" ];
+      };
+      environment.etc."systemd/system-sleep/nvidia-suspend-then-hibernate".source = nvidiaSleepHook;
     })
     (lib.mkIf (isHybrid && cfg.prime.integratedVendor == "intel") {
       hardware.graphics.extraPackages = with pkgs; [ intel-media-driver vpl-gpu-rt ];
       environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
+      # Jogos com VSync desligado renderizavam milhares de quadros a mais que a tela mostra,
+      # esquentando o chip que a GPU Intel divide com a CPU. Isto limita o OpenGL da Mesa à
+      # frequência do monitor; um jogo pode voltar ao ilimitado com `vblank_mode=0 %command%`.
+      environment.sessionVariables.vblank_mode = "3";
     })
 
     # Notebook

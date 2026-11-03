@@ -79,6 +79,9 @@ in
       fastfetch --config examples/32.jsonc
     '';
 
+    # `nv programa` abre o programa na GPU NVIDIA.
+    shellAbbrs.nv = "nvidia-offload";
+
 
   };
   

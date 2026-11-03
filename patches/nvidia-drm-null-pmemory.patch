@@ -1,0 +1,28 @@
+--- a/kernel/nvidia-drm/nvidia-drm-fb.c
++++ b/kernel/nvidia-drm/nvidia-drm-fb.c
+@@ -164,7 +164,13 @@
+             params.planes[i].offset = fb->offsets[i];
+             params.planes[i].pitch = fb->pitches[i];
+ 
+-            if (!nvKms->isVidmem(nv_gem->pMemory) && nv_dev->hasVideoMemory) {
++            /*
++             * pMemory is legitimately NULL for user-memory imports and for
++             * PRIME imports that have no system memory handle.
++             */
++            if (nv_gem->pMemory == NULL) {
++                non_scanout_mem_backed = true;
++            } else if (!nvKms->isVidmem(nv_gem->pMemory) && nv_dev->hasVideoMemory) {
+                 non_scanout_mem_backed = true;
+             }
+         }
+--- a/kernel/nvidia-drm/nvidia-drm-gem-dma-buf.c
++++ b/kernel/nvidia-drm/nvidia-drm-gem-dma-buf.c
+@@ -144,7 +144,7 @@
+ 
+     if ((nv_dma_buf =
+             nv_drm_calloc(1, sizeof(*nv_dma_buf))) == NULL) {
+-        return NULL;
++        return ERR_PTR(-ENOMEM);
+     }
+ 
+     // dma_buf->size must be a multiple of PAGE_SIZE

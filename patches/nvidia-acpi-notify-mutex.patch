@@ -1,0 +1,25 @@
+--- a/kernel/nvidia/nv-acpi.c
++++ b/kernel/nvidia/nv-acpi.c
+@@ -248,6 +248,12 @@
+     return;
+ }
+ 
++/*
++ * Since Linux 6.8 ACPI Notify() handlers run in parallel on all CPUs, and
++ * rm_acpi_notify() oopses when entered concurrently.
++ */
++static DEFINE_MUTEX(nv_acpi_notify_lock);
++
+ static void nv_acpi_notify_event(acpi_handle handle, u32 event_type, void *data)
+ {
+     nv_acpi_t  *pNvAcpiObject = data;
+@@ -257,7 +263,9 @@
+      * Function to handle device specific ACPI events such as display hotplug,
+      * GPS and D-notifier events.
+      */
++    mutex_lock(&nv_acpi_notify_lock);
+     rm_acpi_notify(pNvAcpiObject->sp, NV_STATE_PTR(nvl), event_type);
++    mutex_unlock(&nv_acpi_notify_lock);
+ }
+ 
+ void nv_acpi_register_notifier(nv_linux_state_t *nvl)

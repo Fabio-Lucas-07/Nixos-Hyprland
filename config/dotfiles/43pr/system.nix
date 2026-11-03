@@ -9,6 +9,10 @@
   services.upower.enable = true;
   services.gvfs.enable = true;
 
+  # O tema define o modo claro ou escuro pelo gsettings, que não acha os schemas sem isto.
+  environment.sessionVariables.GSETTINGS_SCHEMA_DIR =
+    "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}/glib-2.0/schemas";
+
   # Lista de layouts de teclado nas configurações.
   environment.systemPackages = [ pkgs.xkeyboard_config ];
   environment.pathsToLink = [ "/share/X11/xkb" ];

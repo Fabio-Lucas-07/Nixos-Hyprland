@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import "../"
 
@@ -9,6 +10,8 @@ Item {
 
     property var monitors: []
     property var savedState: ({})
+    // Output that owns workspaces 1-4, written to display.lua as MONITOR1 for monitors.lua.
+    property string mainName: ""
     property real marginLeft: 0
     property real marginRight: 10
     property real marginTop: 0
@@ -41,6 +44,7 @@ Item {
             if (saved && typeof saved.monitors === "object" && saved.monitors !== null) {
                 savedState = saved.monitors
             }
+            if (saved && typeof saved.main === "string") mainName = saved.main
         } catch (error) {}
 
         // Rewrite stale scales (e.g. an old rounded 1.06) that would trigger "Invalid scale".
@@ -60,6 +64,7 @@ Item {
     function luaFileText() {
         const lines = []
         const names = Object.keys(savedState)
+        if (mainName !== "") lines.push("MONITOR1 = \"" + luaString(mainName) + "\"")
         for (let i = 0; i < names.length; i++) {
             const entry = savedState[names[i]]
             if (!entry) continue
@@ -84,7 +89,9 @@ Item {
         interval: 300
         onTriggered: {
             try {
-                displayFile.setText(JSON.stringify({ monitors: page.savedState }, null, 2))
+                const state = { monitors: page.savedState }
+                if (page.mainName !== "") state.main = page.mainName
+                displayFile.setText(JSON.stringify(state, null, 2))
                 displayLua.setText(page.luaFileText())
             } catch (error) {}
         }
@@ -114,6 +121,7 @@ Item {
     function resetToConfig() {
         stateSaveTimer.stop()
         savedState = ({})
+        mainName = ""
         pReset.command = [
             "sh", "-c",
             "rm -f '" + page.stateDir + "/display.json' '" + page.stateDir + "/display.lua'; hyprctl reload"
@@ -140,7 +148,9 @@ Item {
     }
 
     function isMain(mon) {
-        return !mon.disabled && page.activeMonitors.length > 0 && mon.x === 0 && mon.y === 0
+        if (mon.disabled || page.activeMonitors.length === 0) return false
+        if (page.activeMonitors.some(m => m.name === page.mainName)) return mon.name === page.mainName
+        return mon.x === 0 && mon.y === 0
     }
 
     // Logs hyprctl output so failed rules are visible in the quickshell terminal,
@@ -200,7 +210,15 @@ Item {
             cmds.push("hyprctl eval '" + monitorLua(m, { mode: mode, position: pos, scale: fixedScale(m) }) + "'")
             x += logicalWidth(m)
         }
-        if (ordered.length > 0) cmds.push("hyprctl dispatch focusmonitor '" + ordered[0].name + "'")
+        if (ordered.length > 0) {
+            // Being at 0x0 alone changes nothing visible: the workspaces have to follow.
+            const main = luaString(ordered[0].name)
+            page.mainName = ordered[0].name
+            cmds.push("hyprctl eval 'MONITOR1 = \"" + main + "\"'")
+            for (let id = 1; id <= 4; id++)
+                cmds.push("hyprctl dispatch 'hl.dsp.workspace.move({ workspace = \"" + id + "\", monitor = \"" + main + "\" })'")
+            cmds.push("hyprctl dispatch 'hl.dsp.focus({ monitor = \"" + main + "\" })'")
+        }
         return cmds
     }
 
@@ -534,13 +552,33 @@ Item {
     }
 
     // Applies a mode (resolution + refresh rate) while keeping position and a valid scale.
+    // A new size changes the monitor's footprint, so monitors to its right or below follow it:
+    // first when it grows, so nothing overlaps, and last when it shrinks.
     function applyMode(mon, mode) {
         const scale = scaleForMode(mode, mon, mon.scale !== undefined ? mon.scale : 1)
         rememberMonitor(mon, { mode: mode, scale: scale, position: monitorPosition(mon) })
-        pResolution.command = [
-            "hyprctl", "eval",
-            monitorLua(mon, { mode: mode, position: mon.x + "x" + mon.y, scale: scale })
-        ]
+
+        const size = String(mode).match(/^(\d+)x(\d+)/)
+        const resized = size ? Object.assign({}, mon, { width: parseInt(size[1]), height: parseInt(size[2]), scale: scale }) : mon
+        const dw = logicalWidth(resized) - logicalWidth(mon)
+        const dh = logicalHeight(resized) - logicalHeight(mon)
+        const oldRight = mon.x + logicalWidth(mon)
+        const oldBottom = mon.y + logicalHeight(mon)
+
+        const following = []
+        for (const m of page.activeMonitors) {
+            if (m.name === mon.name) continue
+            const x = m.x >= oldRight ? m.x + dw : m.x
+            const y = m.y >= oldBottom ? m.y + dh : m.y
+            if (x === m.x && y === m.y) continue
+            const position = x + "x" + y
+            rememberMonitor(m, { mode: monitorMode(m), scale: fixedScale(m), position: position })
+            following.push("hyprctl eval '" + monitorLua(m, { mode: monitorMode(m), position: position, scale: fixedScale(m) }) + "'")
+        }
+
+        const self = "hyprctl eval '" + monitorLua(mon, { mode: mode, position: mon.x + "x" + mon.y, scale: scale }) + "'"
+        const cmds = dw > 0 || dh > 0 ? following.concat([self]) : [self].concat(following)
+        pResolution.command = ["sh", "-c", cmds.join("; ")]
         pResolution.running = true
     }
 
@@ -577,6 +615,14 @@ Item {
 
     Timer { id: refreshTimer; interval: 250; onTriggered: page.refresh() }
     Timer { id: lateRefreshTimer; interval: 1500; onTriggered: page.refresh() }
+
+    // Keeps the cards right when a cable is plugged or pulled while the page is open.
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            if (event.name.startsWith("monitor")) refreshTimer.restart()
+        }
+    }
 
     Flickable {
         id: flick

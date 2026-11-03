@@ -62,10 +62,40 @@
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = false;
 
-  programs.hyprland.enable = true;
+  programs.hyprland = {
+    enable = true;
+    withUWSM = true;
+    # O aquamarine 0.15.0 não desliga a saída no kernel quando um monitor é removido, o que
+    # mantém a NVIDIA ligada e atrapalha a reconexão (aquamarine, issue 386).
+    # Remover quando o nixpkgs trouxer a 0.15.1 ou mais nova.
+    package = pkgs.hyprland.override {
+      aquamarine = pkgs.aquamarine.overrideAttrs (finalAttrs: old: {
+        version = "0.15.1";
+        src = old.src.override {
+          tag = "v${finalAttrs.version}";
+          hash = "sha256-jiUl3+k9K+BASO4hvKFhlCMUpHPPoy2q5uZMl3pzOF0=";
+        };
+      });
+    };
+  };
+
+  # O uwsm ativa graphical-session.target, de que dependem o portal, o polkit e o hypridle.
+  # A entrada do pacote sem uwsm abriria uma sessão sem eles, então fica fora do login.
+  services.displayManager.sessionPackages = lib.mkForce [
+    ((pkgs.writeTextDir "share/wayland-sessions/hyprland-uwsm.desktop" ''
+      [Desktop Entry]
+      Name=Hyprland
+      Comment=Hyprland gerenciado pelo uwsm
+      Exec=${lib.getExe config.programs.uwsm.package} start -e -D Hyprland -- ${config.programs.hyprland.package}/bin/start-hyprland
+      Type=Application
+      DesktopNames=Hyprland
+    '').overrideAttrs (_: {
+      passthru.providedSessions = [ "hyprland-uwsm" ];
+    }))
+  ];
 
   # Sem sessão padrão, o GDM tenta abrir o gnome-session e entra em loop de login.
-  services.displayManager.defaultSession = "hyprland";
+  services.displayManager.defaultSession = "hyprland-uwsm";
 
   # Senhas salvas dos aplicativos e agente SSH.
   services.gnome.gnome-keyring.enable = true;
@@ -140,7 +170,12 @@
   programs.firefox.enable = true;
   services.flatpak.enable = true;
   services.cron.enable = true;
-  services.printing.enable = true;
+  services.printing = {
+    enable = true;
+    # Impressoras térmicas de 80 mm e 58 mm (Zjiang ZJ-80/ZJ-58 e as POS-80 genéricas):
+    # filtro rastertozj e os modelos zjiang/zj80.ppd e zjiang/zj58.ppd.
+    drivers = [ pkgs.cups-zj-58 ];
+  };
   services.openssh.enable = true;
 
   programs.steam = {
@@ -228,9 +263,9 @@
     pgadmin4-desktopmode  neovim
     dotnet-sdk pkgsCross.mingwW64.stdenv.cc
     
-    lan-mouse
+    wine
     
-    discord brave vesktop telegram-desktop obsidian onlyoffice-desktopeditors
+    discord brave  telegram-desktop obsidian onlyoffice-desktopeditors
     libreoffice-qt hunspell hunspellDicts.ru_RU hunspellDicts.en_US papers
     kdePackages.kolourpaint mission-center glaxnimate inkscape
     hicolor-icon-theme papirus-icon-theme nwg-look

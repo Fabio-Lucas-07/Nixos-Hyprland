@@ -140,6 +140,8 @@ local menu = "rofi -show drun"
 
 bind(mainMod .. " + " .. terminal_key,      hl.dsp.exec_cmd(terminal))
 bind(mainMod .. " + " .. launcher_key,      hl.dsp.exec_cmd("pgrep -x rofi >/dev/null && pkill -x rofi || " .. menu))
+-- Same launcher, but the chosen app runs on the NVIDIA GPU.
+bind(mainMod .. " + ALT + " .. launcher_key, hl.dsp.exec_cmd("pgrep -x rofi >/dev/null && pkill -x rofi || " .. menu .. " -p NVIDIA -run-command 'nvidia-offload {cmd}'"))
 bind(mainMod .. " + " .. qa_key,         hl.dsp.exec_cmd("qs ipc call qa toggle"))
 bind(mainMod .. " + " .. files_key,         hl.dsp.exec_cmd(fileManager))
 bind(mainMod .. " + " .. browser_key,       hl.dsp.exec_cmd(browser))
@@ -236,13 +238,17 @@ bind(mainMod .. " + mouse_up", function() zoomfunction(0.5) end, { repeating = t
 bind(mainMod .. " + code:82", function() zoomfunction(-0.3) end, { repeating = true })
 bind(mainMod .. " + code:86", function() zoomfunction(0.3) end, { repeating = true })
 
-bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl set 5%+"), { locked = true, repeating = true })
-bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%-"), { locked = true, repeating = true })
+-- Logind ignores the power key, so without this it does nothing on a blanked screen.
+bind("XF86PowerOff", hl.dsp.dpms({ action = "on" }), { locked = true })
+
+-- "[!n]*" ignores nvidia_0, which brightnessctl would pick first but doesn't drive the panel on hybrid laptops.
+bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl -c backlight -d '[!n]*' set 5%+"), { locked = true, repeating = true })
+bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -c backlight -d '[!n]*' set 5%-"), { locked = true, repeating = true })
 
 for i = 1, 10 do
     local key = i % 10
-    bind(mainMod .. " + " .. key, hl.dsp.focus({ workspace = i }))
-    bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
+    bind(mainMod .. " + " .. key, function() hl.dispatch(hl.dsp.focus({ workspace = monitor_workspace(i) })) end)
+    bind(mainMod .. " + SHIFT + " .. key, function() hl.dispatch(hl.dsp.window.move({ workspace = monitor_workspace(i) })) end)
 end
 
 bind(mainMod .. " + SHIFT + E", hl.dsp.exit())
@@ -295,16 +301,23 @@ bind(mainMod .. " + equal", hl.dsp.window.resize({ x = 60, y = 0, relative = tru
 bind(mainMod .. " + SHIFT + minus", hl.dsp.window.resize({ x = 0, y = -60, relative = true }), { repeating = true })
 bind(mainMod .. " + SHIFT + equal", hl.dsp.window.resize({ x = 0, y = 60, relative = true }), { repeating = true })
 
-bind(mainMod .. " + U", hl.dsp.focus({ workspace = "r+1" }))
-bind(mainMod .. " + I", hl.dsp.focus({ workspace = "r-1" }))
-bind(mainMod .. " + Page_Down", hl.dsp.focus({ workspace = "r+1" }))
-bind(mainMod .. " + Page_Up", hl.dsp.focus({ workspace = "r-1" }))
-bind(mainMod .. " + CTRL + U", hl.dsp.window.move({ workspace = "r+1" }))
-bind(mainMod .. " + CTRL + I", hl.dsp.window.move({ workspace = "r-1" }))
-bind(mainMod .. " + CTRL + Page_Down", hl.dsp.window.move({ workspace = "r+1" }))
-bind(mainMod .. " + CTRL + Page_Up", hl.dsp.window.move({ workspace = "r-1" }))
-bind(mainMod .. " + SHIFT + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
-bind(mainMod .. " + SHIFT + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
+local function focus_step(delta)
+    return function() hl.dispatch(hl.dsp.focus({ workspace = monitor_workspace_step(delta) })) end
+end
+local function move_step(delta)
+    return function() hl.dispatch(hl.dsp.window.move({ workspace = monitor_workspace_step(delta) })) end
+end
+
+bind(mainMod .. " + U", focus_step(1))
+bind(mainMod .. " + I", focus_step(-1))
+bind(mainMod .. " + Page_Down", focus_step(1))
+bind(mainMod .. " + Page_Up", focus_step(-1))
+bind(mainMod .. " + CTRL + U", move_step(1))
+bind(mainMod .. " + CTRL + I", move_step(-1))
+bind(mainMod .. " + CTRL + Page_Down", move_step(1))
+bind(mainMod .. " + CTRL + Page_Up", move_step(-1))
+bind(mainMod .. " + SHIFT + mouse_down", hl.dsp.focus({ workspace = "m+1" }))
+bind(mainMod .. " + SHIFT + mouse_up", hl.dsp.focus({ workspace = "m-1" }))
 
 bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
 bind("XF86AudioStop", hl.dsp.exec_cmd("playerctl stop"), { locked = true })

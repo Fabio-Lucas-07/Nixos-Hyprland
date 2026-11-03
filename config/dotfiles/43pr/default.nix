@@ -66,6 +66,20 @@ in
     source = config.lib.file.mkOutOfStoreSymlink "${repoConfig}/${file}";
   });
 
+  # Um link quebrado de uma configuração antiga, como ~/.config/matugen, faz o `mkdir`
+  # do Home Manager falhar, e a ativação para sem instalar nenhuma dot.
+  home.activation.removeStaleLinks = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+    for file in ${lib.escapeShellArgs linkedFiles}; do
+      path="${config.xdg.configHome}/$file"
+      while [ "$path" != "${config.xdg.configHome}" ]; do
+        if [ -L "$path" ] && [ ! -e "$path" ]; then
+          run rm "$path"
+        fi
+        path="''${path%/*}"
+      done
+    done
+  '';
+
   home.activation.seedPerMachineFiles = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     for file in ${lib.escapeShellArgs perMachineFiles}; do
       target="${config.xdg.configHome}/$file"

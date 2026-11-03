@@ -34,17 +34,17 @@ sudo nixos-rebuild switch --flake /etc/nixos#$(hostname)
 
 ## Notebook
 
-Em `hosts/alienware`, a tela roda na GPU Intel e a NVIDIA fica desligada até ser pedida:
+Em `hosts/alienware`, a tela roda na GPU Intel. Na bateria, a NVIDIA fica desligada até ser usada; na tomada, fica sempre ligada:
 
 | Uso | Comando |
 | --- | --- |
-| Programa na NVIDIA | `nvidia-offload programa` |
+| Programa na NVIDIA | `Super + Alt + R` (menu de apps) ou `nv programa` no terminal |
 | Jogo na Steam (opções de inicialização) | `gamemoderun nvidia-offload %command%` |
-| Monitor na porta HDMI, que é ligada à NVIDIA | Sessão `Hyprland (HDMI)` na tela de login |
+| Monitor na porta HDMI, ligada à NVIDIA | Conecte o cabo: funciona na hora, e a NVIDIA liga sozinha |
 | Conferir o estado da energia | `scripts/power-check.sh` |
 | Comparar antes e depois de suspender | `scripts/power-check.sh --resume` |
 
-As portas USB-C ficam na GPU Intel e funcionam na sessão normal.
+As portas USB-C ficam na GPU Intel. Sem cabo no HDMI e na bateria, a NVIDIA volta a desligar sozinha.
 
 ## Atalhos principais
 

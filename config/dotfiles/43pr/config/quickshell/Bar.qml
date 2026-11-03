@@ -1284,7 +1284,10 @@ echo "$u $t"
                     delegate: Rectangle {
                         id: dot
                         required property var modelData
-                        visible: modelData.id > 0
+                        // Each monitor's bar only lists that monitor's workspaces.
+                        visible: modelData.id > 0 && modelData.monitor !== null
+                                 && QsWindow.window !== null && QsWindow.window.screen !== null
+                                 && modelData.monitor.name === QsWindow.window.screen.name
                         Layout.alignment: Qt.AlignCenter
                         implicitWidth: root.vertical ? root.wsDotPx
                                      : (modelData.focused ? Math.round(root.wsDotPx * 3.2) : root.wsDotPx)
@@ -1327,7 +1330,7 @@ echo "$u $t"
             WheelHandler {
                 enabled: cfg.wsScroll
                 acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                onWheel: e => root.run("hyprctl dispatch 'hl.dsp.focus({workspace=\"e"
+                onWheel: e => root.run("hyprctl dispatch 'hl.dsp.focus({workspace=\"m"
                                        + (e.angleDelta.y > 0 ? "+1" : "-1") + "\"})'")
             }
         }
