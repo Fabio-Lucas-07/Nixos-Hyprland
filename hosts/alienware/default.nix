@@ -62,6 +62,11 @@ in
     };
   };
 
+  # O Bluetooth do MT7925 às vezes não responde ao iniciar ("Failed to send wmt func ctrl
+  # (-110)") e fica sem funcionar até reiniciar. Desligar a suspensão automática do USB dele
+  # é a correção mais usada para esse erro.
+  boot.extraModprobeConfig = "options btusb enable_autosuspend=0";
+
   boot.blacklistedKernelModules = [
     "xe" # A iGPU usa o i915; o xe carregava sem controlar nenhum dispositivo.
     "spd5118" # Falha com erro -6 em toda retomada; só lê a temperatura da RAM.

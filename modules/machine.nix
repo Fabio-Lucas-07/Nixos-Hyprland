@@ -6,6 +6,15 @@ let
   usesNvidia = builtins.elem cfg.gpu [ "nvidia" "nvidia-hybrid" ];
   isHybrid = cfg.gpu == "nvidia-hybrid";
 
+  # Com o módulo aberto da NVIDIA (driver 595+), o próprio kernel avisa o driver ao dormir,
+  # e os serviços nvidia-suspend/resume nem existem.
+  nvidiaUsesSleepServices = config.hardware.nvidia.powerManagement.enable
+    && !config.hardware.nvidia.powerManagement.kernelSuspendNotifier;
+
+  # Hibernar exige swap em disco; a zram não serve. Sem ela, só suspende.
+  canHibernate = config.swapDevices != [ ];
+  batterySleep = if canHibernate then "suspend-then-hibernate" else "suspend";
+
   # Converte "PCI:1:0:0" (decimal) para "pci-0000:01:00.0", o formato do ID_PATH no udev.
   pciIdPath = busId:
     let
@@ -36,7 +45,7 @@ let
       read -r online <"$file"
       [ "$online" = 1 ] && exit 0
     done
-    exec ${config.systemd.package}/bin/systemctl suspend-then-hibernate
+    exec ${config.systemd.package}/bin/systemctl ${batterySleep}
   '';
 in
 {
@@ -99,7 +108,7 @@ in
       boot.loader.systemd-boot.enable = lib.mkForce false;
       boot.lanzaboote = {
         enable = true;
-        pkiBundle = "/etc/secureboot";
+        pkiBundle = "/var/lib/sbctl";
       };
     })
     (lib.mkIf (!cfg.secureBoot) {
@@ -162,9 +171,10 @@ in
 
       # O console ocuparia o monitor assim que conectado e manteria a NVIDIA ligada sem sessão.
       hardware.nvidia.moduleParams.nvidia-drm.fbdev = lib.mkForce 0;
-
-      # O módulo do NixOS só prepara o driver para suspend e hibernate. Sem isto,
-      # suspend-then-hibernate falha com -EIO e o notebook continua ligado.
+    })
+    # O módulo do NixOS só prepara o driver para suspend e hibernate. Sem isto,
+    # suspend-then-hibernate falha com -EIO e o notebook continua ligado.
+    (lib.mkIf (isHybrid && nvidiaUsesSleepServices) {
       systemd.services.nvidia-suspend-then-hibernate = {
         description = "NVIDIA system suspend-then-hibernate actions";
         path = [ pkgs.kbd ];
@@ -201,7 +211,7 @@ in
 
       # Na bateria, a tampa suspende e hiberna depois: em s2idle a bateria continua descendo.
       services.logind.settings.Login = {
-        HandleLidSwitch = "suspend-then-hibernate";
+        HandleLidSwitch = batterySleep;
         HandleLidSwitchExternalPower = "suspend";
         HandleLidSwitchDocked = "ignore";
       };

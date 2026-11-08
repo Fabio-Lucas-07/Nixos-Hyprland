@@ -46,8 +46,8 @@ hl.env("MOZ_ENABLE_WAYLAND", "1")
 
 hl.config({
     input = {
-        kb_layout = "us",
-        kb_variant = "intl",
+        kb_layout = "br,us",
+        kb_variant = ",intl",
         numlock_by_default = true,
         follow_mouse = 1,
         sensitivity = 0,

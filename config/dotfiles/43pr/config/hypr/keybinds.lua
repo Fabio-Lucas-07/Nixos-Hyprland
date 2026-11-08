@@ -25,8 +25,6 @@ local clipboard_key     = "SHIFT + V"
 local layout_key        = "X"
 local float_key         = "Space"
 local record_key        = "SHIFT + R"
-local shot_key          = "Delete"
-local shot_area_key     = "SHIFT + Delete"
 
 do
     local f = os.getenv("HOME") .. "/.config/quickshell/state/binds.lua"

@@ -213,7 +213,7 @@
   nix.gc = {
     automatic = true;
     dates = "daily";
-    options = "--delete-older-than 14d";
+    options = "--delete-older-than 2d";
   };
 
   users.users."fabio" = {
@@ -259,17 +259,17 @@
     '';
   }))
 
-     maven jdk21 python3 android-tools
+    maven jdk21 python3 android-tools
     pgadmin4-desktopmode  neovim
     dotnet-sdk pkgsCross.mingwW64.stdenv.cc
     
     wine
     
-    discord brave  telegram-desktop obsidian onlyoffice-desktopeditors
+    unityhub discord brave  telegram-desktop obsidian onlyoffice-desktopeditors
     libreoffice-qt hunspell hunspellDicts.ru_RU hunspellDicts.en_US papers
     kdePackages.kolourpaint mission-center glaxnimate inkscape
     hicolor-icon-theme papirus-icon-theme nwg-look
-    insomnia spotify linux-wallpaperengine nautilus
+    insomnia linux-wallpaperengine nautilus
 
     mpv obs-studio gpu-screen-recorder ffmpeg qbittorrent bottles steam-run
     protonup-qt
