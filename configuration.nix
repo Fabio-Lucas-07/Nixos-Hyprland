@@ -259,8 +259,8 @@
     '';
   }))
 
-    maven jdk21 python3 android-tools
-    pgadmin4-desktopmode  neovim
+     maven jdk21 python3 android-tools
+    nwg-displays pgadmin4-desktopmode  neovim
     dotnet-sdk pkgsCross.mingwW64.stdenv.cc
     
     wine
